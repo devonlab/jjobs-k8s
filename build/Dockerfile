@@ -68,7 +68,9 @@ RUN yum update; yum clean all \
     #iptables \
     jq \
     dnsutils \
-    passwd  #RUN mkdir /var/run/sshd
+    passwd \
+    vim
+#RUN mkdir /var/run/sshd
 #RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
 # Add User : jjobs
