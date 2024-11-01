@@ -15,7 +15,7 @@ then
                 echo "Database connection is available."
                 break
             else
-                echo "Database connection failed. Retrying in 1 second..."
+                echo "Database connection failed. Retrying in 5 seconds..."
                 sleep 5
             fi
         done
@@ -33,7 +33,7 @@ then
                 echo "jjob-server is available."
                 break
             else
-                echo "jjob-server status check failed. Retrying in 1 second..."
+                echo "jjob-server status check failed. Retrying in 5 seconds..."
                 sleep 5
             fi
         done
