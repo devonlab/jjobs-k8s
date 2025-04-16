@@ -15,23 +15,23 @@ then
 
   if [ "$ON_BOOT" == "yes" ] || [ "$ON_BOOT" == "y" ]; then
     if [ "$INSTALL_KIND" == "A" ]; then
-      env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_agent.sh" &
+      . $JJOBS_BASE/start_agent.sh &
     elif [ "$INSTALL_KIND" == "S" ]; then
-      env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_server.sh" &
+      . $JJOBS_BASE/start_server.sh &
     elif [ "$INSTALL_KIND" == "M" ]; then
-      env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_manager.sh" &
+      . $JJOBS_BASE/start_manager.sh &
     else
       echo "start all..."
-      env -u JAVA_TOOL_OPTIONS bash -c ". $WORKING_DIR/start-all.sh" &
+      . $WORKING_DIR/start-all.sh
     fi
   elif [ "$ON_BOOT" == "manager" ]; then
     echo "start manager..."
-    env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_manager.sh" &
+    . $JJOBS_BASE/start_manager.sh &
   elif [ "$ON_BOOT" == "exceptagent" ]; then
     echo "start manager and server..."
-    env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_manager.sh" &
+    . $JJOBS_BASE/start_manager.sh &
     sleep 10
-    env -u JAVA_TOOL_OPTIONS bash -c ". $JJOBS_BASE/start_server.sh" &
+    . $JJOBS_BASE/start_server.sh &
   else
     echo "manual start..."
   fi
