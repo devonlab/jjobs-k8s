@@ -109,8 +109,8 @@ spec:
               value: "jjobs.default.svc.cluster.local"
             - name: LANG
               value: ko_KR.utf8
-            - name: CUSTOM_COMMAND
-              value: "echo 'Hello from env!' && ls -l"
+            #- name: CUSTOM_COMMAND
+              #value: "echo 'Hello from env!' && ls -l"
           ports:
             - containerPort: 7065
             - containerPort: 7075
@@ -296,8 +296,8 @@ spec:
           value: "A"
         - name: LANG
           value: ko_KR.utf8
-        - name: CUSTOM_COMMAND
-          value: "echo 'Hello from env!' && ls -l"
+        #- name: CUSTOM_COMMAND
+          #value: "echo 'Hello from env!' && ls -l"
         volumeMounts:
         - mountPath: /logs001/jjobs
           name: jjobs-default-log
