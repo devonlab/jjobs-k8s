@@ -70,10 +70,10 @@ fi
 if [ -z "$NETWORKADDRESS_CACHE_NEGATIVE_TTL" ]; then
   export NETWORKADDRESS_CACHE_NEGATIVE_TTL=3
 fi
-sed -i '313d' $JJOBS_BASE/openjdk-8u342-b07-jre/lib/security/java.security
-sed -i '313inetworkaddress.cache.ttl='"$NETWORKADDRESS_CACHE_TTL"'' $JJOBS_BASE/openjdk-8u342-b07-jre/lib/security/java.security
-sed -i '328d' $JJOBS_BASE/openjdk-8u342-b07-jre/lib/security/java.security
-sed -i '328inetworkaddress.cache.negative.ttl='"$NETWORKADDRESS_CACHE_NEGATIVE_TTL"'' $JJOBS_BASE/openjdk-8u342-b07-jre/lib/security/java.security
+sed -i '313d' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
+sed -i '313inetworkaddress.cache.ttl='"$NETWORKADDRESS_CACHE_TTL"'' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
+sed -i '328d' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
+sed -i '328inetworkaddress.cache.negative.ttl='"$NETWORKADDRESS_CACHE_NEGATIVE_TTL"'' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
 
 if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
         echo "unwar..."
