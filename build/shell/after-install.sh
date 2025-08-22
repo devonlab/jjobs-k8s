@@ -70,10 +70,10 @@ fi
 if [ -z "$NETWORKADDRESS_CACHE_NEGATIVE_TTL" ]; then
   export NETWORKADDRESS_CACHE_NEGATIVE_TTL=3
 fi
-sed -i '313d' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
-sed -i '313inetworkaddress.cache.ttl='"$NETWORKADDRESS_CACHE_TTL"'' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
-sed -i '328d' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
-sed -i '328inetworkaddress.cache.negative.ttl='"$NETWORKADDRESS_CACHE_NEGATIVE_TTL"'' $JJOBS_BASE/openjdk-8u462-b08-linux-x64/jre/lib/security/java.security
+sed -i '313d' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
+sed -i '313inetworkaddress.cache.ttl='"$NETWORKADDRESS_CACHE_TTL"'' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
+sed -i '328d' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
+sed -i '328inetworkaddress.cache.negative.ttl='"$NETWORKADDRESS_CACHE_NEGATIVE_TTL"'' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
 
 if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
         echo "unwar..."
@@ -115,7 +115,7 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
                 echo "add the jdbc url connection parameters.."
                 sed -i '14s/\"\/>/'$JDBC_PARAMETERS'\"\/>/' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/spring/context-datasource.xml
         fi
-        
+
 	echo "edit start_manager.sh"
 	sed -i "5d" $JJOBS_BASE/start_manager.sh
 
