@@ -68,6 +68,8 @@ spec:
               #value: "/home/jjobs/jdk-test"
             #- name: WGET_FILE_NAME
               #value: "jdk17.tar.gz"
+            #- name: JJOBS_AGENT_STARTUP_TIMEOUT
+              #value: "30"
           volumeMounts:
             - mountPath: /logs001/jjobs
               name: jjobs-default-log
