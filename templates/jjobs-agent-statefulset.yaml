@@ -46,6 +46,8 @@ spec:
           value: ko_KR.utf8
         #- name: CUSTOM_COMMAND
           #value: "echo 'Hello from env!' && ls -l"
+        #- name: JJOBS_AGENT_STARTUP_TIMEOUT
+          #value: "30"
         volumeMounts:
         - mountPath: /logs001/jjobs
           name: jjobs-default-log
