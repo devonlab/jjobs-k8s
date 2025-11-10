@@ -12,6 +12,10 @@ if [ "$INSTALL_KIND" == "A" ] || [ "$INSTALL_KIND" == "F" ] ; then
         sed -i 's@log.file.keep.backup_delete_yn=.*$@log.file.keep.backup_delete_yn='"$LOG_DELETE_YN"'@g' $JJOBS_BASE/agent/app/META-INF/resource.properties
 
         mkdir -p $JJOBS_BASE/agent/.bin
+
+	      echo "edit start_agent.sh"
+        sed -i '$a\
+$WORKING_DIR/tail-agent-syslog.sh &' $JJOBS_BASE/start_agent.sh
 fi
 
 if [ "$INSTALL_KIND" == "S" ] || [ "$INSTALL_KIND" == "F" ] ; then
@@ -22,7 +26,6 @@ if [ "$INSTALL_KIND" == "S" ] || [ "$INSTALL_KIND" == "F" ] ; then
         mkdir -p $LOGS_BASE
         sed -i "52d" $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
         sed -i "7d" $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
-        sed -i '/<AppenderRef ref="console/d' $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@<!--@@g' $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@-->@@g' $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@/logs001/jjobs/server@'"$LOGS_BASE"'/server/'"$HOSTNAME"'@g' $JJOBS_BASE/server/webapps/jjob-server/WEB-INF/classes/properties/log4j2.xml
@@ -48,13 +51,12 @@ if [ "$INSTALL_KIND" == "S" ] || [ "$INSTALL_KIND" == "F" ] ; then
         INT=$((id))
         SERVER_ID=$(($INT + 1))
         sed -i 's@export JJOB_SERVER_ID=.*$@export JJOB_SERVER_ID=1-'"$SERVER_ID"'@g' $JJOBS_BASE/start_server.sh
-        sed -i 's@tail -f /engn001/jjobs/server/logs/catalina.out@if [ ! -e $LOGS_BASE/server/$HOSTNAME/server.log ]; then\
-    sleep 10\
-fi\
-if [ ! -e $LOGS_BASE/server/$HOSTNAME/server.log ]; then\
-    sleep 10\
-fi\
-tail -f $LOGS_BASE/server/$HOSTNAME/server.log@g' $JJOBS_BASE/start_server.sh
+        sed -i '/tail -f.*catalina.out/d' $JJOBS_BASE/start_server.sh
+        sed -i 's@nohup ./startup.sh 2>&1 > /dev/null &@./startup.sh \&@' $JJOBS_BASE/start_server.sh
+
+        echo "link catalina.out to stdout"
+        mkdir -p $JJOBS_BASE/server/logs
+        ln -sf /dev/stdout $JJOBS_BASE/server/logs/catalina.out
 
         if [ -z "$JJOB_SERVICE_NAME" ]; then
           echo "skip to set the JJOB_SERVER_IP"
@@ -82,7 +84,6 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
         echo "manager log setting"
         sed -i "26d" $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
         sed -i "7d" $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
-        sed -i '/<AppenderRef ref="console/d' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@<!--@@g' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@-->@@g' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
         sed -i 's@/logs001/jjobs/manager@'"$LOGS_BASE"'/manager/'"$HOSTNAME"'@g' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/properties/log4j2.xml
@@ -116,12 +117,18 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
                 sed -i '14s/\"\/>/'$JDBC_PARAMETERS'\"\/>/' $JJOBS_BASE/manager/webapps/jjob-manager/WEB-INF/classes/spring/context-datasource.xml
         fi
 
-	echo "edit start_manager.sh"
-	sed -i "5d" $JJOBS_BASE/start_manager.sh
+        echo "edit start_manager.sh"
+        sed -i "5d" $JJOBS_BASE/start_manager.sh
 
         if [ -n "$SSO_KEYCLOAK_ISSUER_URI" ]; then
                 sed -i '3iexport SSO_KEYCLOAK_ISSUER_URI='$SSO_KEYCLOAK_ISSUER_URI'' start_manager.sh
         fi
+        sed -i '4s@nohup ./startup.sh 2>&1 > /dev/null &@./startup.sh \&@' $JJOBS_BASE/start_manager.sh
+
+        echo "link catalina.out to stdout"
+        mkdir -p $JJOBS_BASE/manager/logs
+        ln -sf /dev/stdout $JJOBS_BASE/manager/logs/catalina.out
+
 fi
 
 if [ "$WGET_URL" ] && [ "$WGET_FOLDER_PATH" ] && [ "$WGET_FILE_NAME" ] ; then
