@@ -51,6 +51,12 @@ ENV AGENT_GROUP_ID=0
 ENV ON_BOOT=yes \
     INSTALL_KIND=F
 
+# Environment variables - Google Cloud SDK
+# -------------------------------------------------------------
+ENV CLOUD_SDK_VERSION="457.0.0"
+ENV INSTALL_DIR="/opt/google-cloud-sdk"
+ENV PATH="${INSTALL_DIR}/bin:$PATH"
+
 # Install Util
 # -------------------------------------------------------------
 RUN yum update; yum clean all \
@@ -68,7 +74,8 @@ RUN yum update; yum clean all \
     jq \
     dnsutils \
     passwd \
-    vim
+    vim \
+    python3
 #RUN mkdir /var/run/sshd
 #RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
@@ -102,6 +109,15 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 
 # timezone setting
 RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+# Google Cloud
+RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.zip && \
+    mkdir -p ${INSTALL_DIR} && \
+    unzip google-cloud-sdk.zip -d /opt/ && \
+    rm google-cloud-sdk.zip && \
+    /opt/google-cloud-sdk/install.sh --usage-reporting=false --path-update=false --rc-path=/dev/null --quiet && \
+    /opt/google-cloud-sdk/bin/gcloud components install alpha --quiet && \
+    yum clean all
 
 # Copy files needed during both installation and runtime
 # -------------
