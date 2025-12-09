@@ -118,6 +118,7 @@ COPY shell/agent-healthcheck.sh $WORKING_DIR/
 COPY shell/network-status-check.sh $WORKING_DIR/
 COPY shell/readiness.sh $WORKING_DIR/
 COPY shell/liveness.sh $WORKING_DIR/
+COPY shell/tail-agent-syslog.sh $WORKING_DIR/
 COPY installer/jjob_installer_linux_x64.sh /install/
 
 RUN chmod ug+x $WORKING_DIR/*.sh \
