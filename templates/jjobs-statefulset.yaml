@@ -71,6 +71,8 @@ spec:
               value: "jjobs.default.svc.cluster.local"
             - name: LANG
               value: ko_KR.utf8
+            - name: CATALINA_OPTS
+              value: "-XX:InitialRAMPercentage=25.0 -XX:MaxRAMPercentage=25.0"
             #- name: CUSTOM_COMMAND
               #value: "echo 'Hello from env!' && ls -l"
             #- name: API_PRIVATE_TOKEN
