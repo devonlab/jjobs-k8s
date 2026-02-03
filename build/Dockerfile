@@ -100,6 +100,10 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin
 
+# KR language pack
+# -------------------------------------------------------------
+RUN dnf install -y glibc-langpack-ko
+
 # timezone setting
 RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
