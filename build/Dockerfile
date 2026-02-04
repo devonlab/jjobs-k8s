@@ -4,7 +4,7 @@
 
 # Pull base image
 # ---------------
-FROM public.ecr.aws/amazonlinux/amazonlinux:2022 as base
+FROM amazonlinux:2023 as base
 
 # Maintainer
 # ----------
@@ -53,8 +53,8 @@ ENV ON_BOOT=yes \
 
 # Install Util
 # -------------------------------------------------------------
-RUN yum update; yum clean all \
-    && yum -y install wget \
+RUN dnf update -y && dnf clean all \
+    && dnf -y install wget \
     openssh-server openssh-clients \
     hostname \
     tar \
@@ -66,7 +66,7 @@ RUN yum update; yum clean all \
     fontconfig \
     #iptables \
     jq \
-    dnsutils \
+    bind-utils \
     passwd \
     vim
 #RUN mkdir /var/run/sshd
