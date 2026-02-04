@@ -4,7 +4,7 @@
 
 # Pull base image
 # ---------------
-FROM public.ecr.aws/amazonlinux/amazonlinux:2022 as base
+FROM amazonlinux:2023 as base
 
 # Maintainer
 # ----------
@@ -19,8 +19,8 @@ ENV WORKING_DIR=/working
 
 # Install Util
 # -------------------------------------------------------------
-RUN yum update; yum clean all \
-    && yum -y install openssh-server openssh-clients \
+RUN dnf update -y && dnf clean all \
+    && dnf -y install openssh-server openssh-clients \
     hostname \
     tar \
     ncurses \
