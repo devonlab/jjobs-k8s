@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #install kind: M => Do nothing
 #install kind: S && ON_BOOT: yes or y or exeptagent => Server gracefully stop
 #install kind: A && ON_BOOT: yes or y =>  Agent gracefully stop

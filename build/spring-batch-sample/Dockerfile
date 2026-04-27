@@ -4,8 +4,8 @@
 
 # Pull base image
 # ---------------
-#FROM public.ecr.aws/amazonlinux/amazonlinux:2022 as base
-FROM amazoncorretto:8
+#FROM amazonlinux:2023 as base
+FROM amazoncorretto:8-al2023
 
 # Maintainer
 # ----------
@@ -20,7 +20,7 @@ ENV WORKING_DIR=/working
 
 # Install Util
 # -------------------------------------------------------------
-RUN yum update; yum clean all    
+RUN dnf update -y && dnf clean all
 
 
 # Copy files needed during both installation and runtime

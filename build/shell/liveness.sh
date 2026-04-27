@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #install kind: M && ON_BOOT: yes or y or exeptagent  => Manager check
 #install kind: S && ON_BOOT: yes or y or exeptagent && RESUME_ON_STARTUP: y or yes => Server check
 #install kind: A && ON_BOOT: yes or y => Agent check

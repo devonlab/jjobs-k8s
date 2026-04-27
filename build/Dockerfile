@@ -4,7 +4,7 @@
 
 # Pull base image
 # ---------------
-FROM public.ecr.aws/amazonlinux/amazonlinux:2022 as base
+FROM amazonlinux:2023 as base
 
 # Maintainer
 # ----------
@@ -53,8 +53,8 @@ ENV ON_BOOT=yes \
 
 # Install Util
 # -------------------------------------------------------------
-RUN yum update; yum clean all \
-    && yum -y install wget \
+RUN dnf update -y && dnf clean all \
+    && dnf -y install wget \
     openssh-server openssh-clients \
     hostname \
     tar \
@@ -66,9 +66,9 @@ RUN yum update; yum clean all \
     fontconfig \
     #iptables \
     jq \
-    dnsutils \
+    bind-utils \
     passwd \
-    vim
+    vim vim-minimal
 #RUN mkdir /var/run/sshd
 #RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
@@ -130,7 +130,10 @@ RUN chmod ug+x $WORKING_DIR/*.sh \
     && chmod ug+x /*.sh
 #RUN chown -R jjobs:jjobs $WORKING_DIR
 #RUN chown jjobs:jjobs /entrypoint.sh
-RUN echo 'if [ -f /etc/bashrc ]; then . /etc/bashrc; fi' >> /root/.bashrc
+# System-wide aliases (applies to root and any future user via /etc/skel/.bashrc)
+COPY shell/jjobs-aliases.sh /etc/profile.d/jjobs-aliases.sh
+RUN chmod 644 /etc/profile.d/jjobs-aliases.sh \
+    && echo 'if [ -f /etc/bashrc ]; then . /etc/bashrc; fi' >> /root/.bashrc
 
 VOLUME ["/logs001/jjobs"]
 
