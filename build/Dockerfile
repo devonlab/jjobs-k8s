@@ -4,7 +4,7 @@
 
 # Pull base image
 # ---------------
-FROM public.ecr.aws/amazonlinux/amazonlinux:2022 as base
+FROM amazonlinux:2023 as base
 
 # Maintainer
 # ----------
@@ -39,9 +39,8 @@ ENV JDBC_URL=jdbc:postgresql://127.0.0.1:7432/jjobs \
 
 # Environment variables - server
 # -------------------------------------------------------------
-ENV JJOBS_SERVER_ID=1 \
-    JJOBS_SERVER_IP=127.0.0.1 \
-    JJOB_SERVICE_NAME=.default.svc.cluster.local
+ENV JJOBS_SERVER_IP=127.0.0.1 \
+    JJOB_SERVICE_NAME=jjobs.default.svc.cluster.local
 
 # Environment variables - agent
 # -------------------------------------------------------------
@@ -54,8 +53,8 @@ ENV ON_BOOT=yes \
 
 # Install Util
 # -------------------------------------------------------------
-RUN yum update; yum clean all \
-    && yum -y install wget \
+RUN dnf update -y && dnf clean all \
+    && dnf -y install wget \
     openssh-server openssh-clients \
     hostname \
     tar \
@@ -65,8 +64,12 @@ RUN yum update; yum clean all \
     procps \
     telnet \
     fontconfig \
-    dnsutils \
-    passwd  #RUN mkdir /var/run/sshd
+    #iptables \
+    jq \
+    bind-utils \
+    passwd \
+    vim vim-minimal
+#RUN mkdir /var/run/sshd
 #RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
 # Add User : jjobs
@@ -105,18 +108,27 @@ RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 COPY xml/web_redis.xml $WORKING_DIR/
 COPY xml/context-manager_redis.xml $WORKING_DIR/
 COPY shell/entrypoint.sh /entrypoint.sh
+COPY shell/pre-stop.sh /pre-stop.sh
+COPY shell/post-start.sh /post-start.sh
 COPY shell/install-jjobs.sh shell/after-install.sh $WORKING_DIR/
 COPY shell/install-agent.sh $WORKING_DIR/
 COPY shell/start-all.sh shell/stop-all.sh $WORKING_DIR/
 COPY shell/sample-shell.sh $WORKING_DIR/
 COPY shell/agent-healthcheck.sh $WORKING_DIR/
+COPY shell/network-status-check.sh $WORKING_DIR/
+COPY shell/readiness.sh $WORKING_DIR/
+COPY shell/liveness.sh $WORKING_DIR/
+COPY shell/tail-agent-syslog.sh $WORKING_DIR/
 COPY installer/jjob_installer_linux_x64.sh /install/
 
 RUN chmod ug+x $WORKING_DIR/*.sh \
     && chmod ug+x /install/*.sh
 #RUN chown -R jjobs:jjobs $WORKING_DIR
 #RUN chown jjobs:jjobs /entrypoint.sh
-RUN echo 'if [ -f /etc/bashrc ]; then . /etc/bashrc; fi' >> /root/.bashrc
+# System-wide aliases (applies to root and any future user via /etc/skel/.bashrc)
+COPY shell/jjobs-aliases.sh /etc/profile.d/jjobs-aliases.sh
+RUN chmod 644 /etc/profile.d/jjobs-aliases.sh \
+    && echo 'if [ -f /etc/bashrc ]; then . /etc/bashrc; fi' >> /root/.bashrc
 
 VOLUME ["/logs001/jjobs"]
 
