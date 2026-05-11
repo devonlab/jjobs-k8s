@@ -112,17 +112,11 @@ RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 COPY xml/web_redis.xml $WORKING_DIR/
 COPY xml/context-manager_redis.xml $WORKING_DIR/
 COPY shell/entrypoint.sh /entrypoint.sh
-COPY shell/pre-stop.sh /pre-stop.sh
-COPY shell/post-start.sh /post-start.sh
 COPY shell/install-jjobs.sh shell/after-install.sh $WORKING_DIR/
 COPY shell/install-agent.sh $WORKING_DIR/
 COPY shell/start-all.sh shell/stop-all.sh $WORKING_DIR/
 COPY shell/sample-shell.sh $WORKING_DIR/
 COPY shell/agent-healthcheck.sh $WORKING_DIR/
-COPY shell/network-status-check.sh $WORKING_DIR/
-COPY shell/readiness.sh $WORKING_DIR/
-COPY shell/liveness.sh $WORKING_DIR/
-COPY shell/tail-agent-syslog.sh $WORKING_DIR/
 COPY installer/jjob_installer_linux_x64.sh /install/
 
 RUN chmod ug+x $WORKING_DIR/*.sh \

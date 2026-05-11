@@ -36,6 +36,6 @@ RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 VOLUME ["/logs001/jjobs"]
 
 EXPOSE 22
-ENTRYPOINT ["/working/spring-batch-sample.sh", "-fileName=not-exist-file.csv"]
+ENTRYPOINT ["/working/spring-batch-sample.sh"]
 
 
