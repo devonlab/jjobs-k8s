@@ -65,7 +65,6 @@ RUN dnf update -y && dnf clean all \
     telnet \
     fontconfig \
     #iptables \
-    jq \
     bind-utils \
     passwd \
     vim vim-minimal
