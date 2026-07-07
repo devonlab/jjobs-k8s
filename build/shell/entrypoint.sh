@@ -234,7 +234,13 @@ fi
 
 ##
 ## Workaround for graceful shutdown.
+## kubelet의 SIGTERM 수신시에만 루프를 탈출하여 PID 1을 정상 종료.
 ##
-while [ "$END" == '' ]; do
-        sleep 5
+JJOBS_SIGTERM_RECEIVED=''
+trap 'JJOBS_SIGTERM_RECEIVED=1' TERM
+while [ -z "$JJOBS_SIGTERM_RECEIVED" ]; do
+        sleep 5 &
+        wait $! || true
 done
+
+exit 0;
