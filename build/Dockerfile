@@ -65,7 +65,6 @@ RUN dnf update -y && dnf clean all \
     telnet \
     fontconfig \
     #iptables \
-    jq \
     bind-utils \
     passwd \
     vim vim-minimal
@@ -99,6 +98,12 @@ RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zi
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin
+
+# jq (CVE-2026-32316 대응: 공식 정적 바이너리 사용)
+# -------------------------------------------------------------
+RUN curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64 \
+    && chmod +x ./jq-linux-amd64 \
+    && mv ./jq-linux-amd64 /usr/local/bin/jq
 
 # KR language pack
 # -------------------------------------------------------------
