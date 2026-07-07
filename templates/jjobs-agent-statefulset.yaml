@@ -18,6 +18,9 @@ spec:
         app: jjobs-agent
     spec:
       terminationGracePeriodSeconds: 36000
+      # IRSA를 사용해 다중 EKS 클러스터에 접근하려면 jjobs-rbac.yaml의 jjobs-agent ServiceAccount를 사용한다.
+      # 단일 클러스터 환경에서도 jjobs-agent SA는 안전하게 사용 가능하다.
+      serviceAccountName: jjobs-agent
       containers:
         - name: jjobs-agent-container
           image: devonlab/jjobs
@@ -58,6 +61,29 @@ spec:
               value: "3"
             - name: LANG
               value: ko_KR.utf8
+            # 다중 EKS 클러스터 접근 설정 (Optional)
+            # ----------------------------------------------------------------
+            # AWS_DEFAULT_REGION: aws CLI fallback region. 항목별 region을 KUBE_CONTEXTS에서 명시하므로 디버깅용 fallback이다.
+            #                    환경에 맞게 조정한다(예: us-east-1, eu-west-1).
+            - name: AWS_DEFAULT_REGION
+              value: "ap-northeast-2"
+            # KUBE_CONTEXTS: Pod 부팅 시 entrypoint가 jq로 파싱하여 클러스터별 kubeconfig context를 등록하는 JSON 배열.
+            #                값이 비어있거나 미설정이면 entrypoint는 no-op하며 단일 클러스터 동작이 유지된다(현재 클러스터는 등록 없이 기본 동작).
+            #                즉 멀티클러스터(다른 계정 EKS, on-prem 등)에 분배 생성할 때만 설정한다.
+            #                provider: "raw"       → server/caFile/tokenFile을 명시해 등록하는 범용 메커니즘(클라우드 API 없는 on-prem 등). 정적 토큰/CA를 마운트해 사용.
+            #                provider: "eks"       → aws eks update-kubeconfig로 등록하며 IRSA의 eks:DescribeCluster IAM 권한이 필요하다.
+            #                provider: "incluster" → (선택) 현재 클러스터를 alias로도 노출하고 싶을 때만. SA(RBAC)만으로 등록(AWS/IRSA 불필요), raw의 zero-config 프리셋.
+            #                roleArn은 cross-account 시나리오(Agent 계정 → 대상 계정 Role AssumeRole)에서만 지정한다.
+            - name: KUBE_CONTEXTS
+              value: ""
+            #- name: KUBE_CONTEXTS
+            #  value: |
+            #    [
+            #      {"alias":"onprem","provider":"raw","server":"https://10.0.0.1:6443","caFile":"/etc/kube/onprem-ca.crt","tokenFile":"/etc/kube/onprem-token","namespace":"default"},
+            #      {"alias":"prod-a","provider":"eks","cluster":"prod-a","region":"ap-northeast-2"},
+            #      {"alias":"prod-b","provider":"eks","cluster":"prod-b","region":"us-east-1","roleArn":"arn:aws:iam::<input_target_account_id>:role/<input_cross_account_role>"},
+            #      {"alias":"main","provider":"incluster"}
+            #    ]
             #- name: CUSTOM_COMMAND
               #value: "echo 'Hello from env!' && ls -l"
             #- name: API_PRIVATE_TOKEN

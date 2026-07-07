@@ -87,6 +87,12 @@ RUN mkdir -p $JJOBS_BASE \
 #RUN chown -R jjobs:jjobs $LOGS_BASE
 #RUN chown -R jjobs:jjobs $WORKING_DIR
 
+# AWS CLI 비대화형 환경 설정
+# -------------------------------------------------------------
+# 컨테이너처럼 TTY가 없는 환경에서 AWS CLI v2가 less 등의 pager로 stdout을 감싸 hang/출력 깨짐이 발생하는 것을 방지한다.
+# kubectl exec credential plugin이 호출하는 `aws eks get-token`의 JSON 출력 정합성 보장에도 필수.
+ENV AWS_PAGER=""
+
 # aws-cli
 # -------------------------------------------------------------
 RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip \
