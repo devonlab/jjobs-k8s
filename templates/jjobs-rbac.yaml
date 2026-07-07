@@ -22,6 +22,11 @@ rules:
   resources: [ "jobs" ]
   verbs: [ "get", "list", "watch", "create", "update", "patch", "delete"]
 ---
+# [업그레이드 참고] 이전 버전은 batch Role을 기본 SA(default)에 default-batch RoleBinding으로 부여했다.
+# 신규 버전은 전용 jjobs-agent SA를 사용하므로 default-batch는 더 이상 J-Jobs가 사용하지 않는다.
+# default SA를 쓰는 다른 워크로드가 이 권한(pods/jobs CRUD)에 의존하지 않는다면, 불필요한 권한
+# 잔존을 없애기 위해 아래 정리를 권장한다(선택). 의존 워크로드가 있다면 삭제하지 않는다.
+#   kubectl delete rolebinding default-batch -n default --ignore-not-found
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:

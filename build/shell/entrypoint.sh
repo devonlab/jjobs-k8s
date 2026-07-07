@@ -51,6 +51,17 @@ register_raw_context() {
   local r_alias="$1" r_server="$2" r_ca_file="$3" r_token_file="$4" r_namespace="${5:-default}"
   local r_user="${r_alias}-sa"
 
+  # alias에 '.'이 있으면 아래 `kubectl config set "users.${r_user}.tokenFile"` 의 dot 경로가
+  # users→<앞부분>→<뒷부분>-sa→tokenFile 로 중첩 파싱되어, set-context가 참조하는 평면 user가
+  # 존재하지 않게 된다(context는 등록되나 런타임 kubectl 호출이 인증 실패하는 silent failure).
+  # eks provider는 aws CLI가 kubeconfig를 직접 쓰므로 무관하며, 이 제약은 raw/incluster에만 적용된다.
+  case "$r_alias" in
+    *.*)
+      kc_log "$r_alias" "FAILED: raw/incluster alias must not contain '.' (breaks 'kubectl config set users.<alias>-sa.tokenFile' path parsing); use e.g. prod-a. Continuing with remaining contexts."
+      return 1
+      ;;
+  esac
+
   if [ -z "$r_server" ]; then
     kc_log "$r_alias" "FAILED: server is empty; continuing with remaining contexts."
     return 1

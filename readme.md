@@ -313,6 +313,7 @@ http://{externalIP}:7065/jjob-manager
 
 ### J-Jobs 에이전트 설치
 #### Agent를 위한 Statefulset 구성
+- `jjobs-agent-statefulset.yaml` 은 `jjobs-rbac.yaml` 이 생성하는 `jjobs-agent` ServiceAccount를 참조한다. 따라서 **`jjobs-rbac.yaml` 을 먼저 apply한 뒤 StatefulSet을 apply**한다(SA가 없으면 Pod가 SA 생성 전까지 기동되지 못한다).
 - PersistentVolume(EFS) 사용 여부 확인 후 PersistentVolumeClaim, volume 조정
 - 에이전트가 서버에 접근하기 위한 서버의 서비스 IP(Headless Service의 dns)와 port 확인
 - 에이전트 설치될 namespace 확인
@@ -578,3 +579,4 @@ aws sts get-caller-identity
 ### 알려진 한계
 
 - 현재 이미지는 EKS 만 지원한다. GKE / AKS 의 경우 `gcloud` / `az` CLI 가 이미지에 포함되어 있지 않아 향후 별도 image variant 또는 init container 전략으로 확장 예정이다.
+- `raw` / `incluster` provider의 `alias` 에는 `.`(마침표)를 사용할 수 없다. entrypoint가 `kubectl config set users.<alias>-sa.tokenFile` 로 등록하는데, alias에 `.`이 있으면 dot 경로가 중첩 파싱되어 context는 등록되나 인증이 동작하지 않는다(예: `prod.a` → `prod-a`로 대체). `eks` provider는 이 제약이 없다.
