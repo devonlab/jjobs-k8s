@@ -107,8 +107,8 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
 
                 DECRYPTED_DB_USER=`$JJOBS_BASE/encrypter.sh d $ENCRYPTED_DB_USER`
                 DECRYPTED_DB_PASSWD=`$JJOBS_BASE/encrypter.sh d $ENCRYPTED_DB_PASSWD`
-                sed -i '29d' $JJOBS_BASE/manager/conf/context.xml
-                sed -i '29i\                         username='\"$DECRYPTED_DB_USER\"' password='\"$DECRYPTED_DB_PASSWD\"' driverClassName="org.postgresql.Driver"' $JJOBS_BASE/manager/conf/context.xml
+                sed -i '30d' $JJOBS_BASE/manager/conf/context.xml
+                sed -i '30i\                         username='\"$DECRYPTED_DB_USER\"' password='\"$DECRYPTED_DB_PASSWD\"' driverClassName="org.postgresql.Driver"' $JJOBS_BASE/manager/conf/context.xml
 
         fi
 
