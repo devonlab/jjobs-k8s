@@ -25,6 +25,7 @@ set -e
 #      "caFile":"/etc/kube/onprem-ca.crt","tokenFile":"/etc/kube/onprem-token","namespace":"default"},
 #     {"alias":"prod-a","provider":"eks","cluster":"prod-a","region":"ap-northeast-2"},
 #     {"alias":"prod-b","provider":"eks","cluster":"prod-b","region":"us-east-1",
+#      "assumeRoleArn":"arn:aws:iam::222:role/CrossAcctEksDiscovery",
 #      "roleArn":"arn:aws:iam::222:role/CrossAcctEksAccess"},
 #     {"alias":"main","provider":"incluster"}
 #   ]
@@ -137,12 +138,23 @@ register_kube_contexts() {
 
   kc_log "" "registering kubectl context(s)..."
   # 프로세스 치환으로 루프를 함수 본문 스코프에 유지한다(파이프 서브셸 회피 → 아래 변수들을 local로 가둔다).
-  local item provider ctx_alias cluster region role_arn server ca_file token_file namespace cmd
+  # aws eks update-kubeconfig는 등록한 context를 current-context로 바꾼다. 기존 context를
+  # 명시하지 않는 Job의 기본 대상으로 유지하기 위해 등록 전에 상태를 보관한다.
+  local original_context="" has_original_context=false
+  if original_context=$(kubectl config current-context 2>/dev/null); then
+    has_original_context=true
+    kc_log "" "preserving current context ($original_context)."
+  else
+    kc_log "" "no current context to preserve."
+  fi
+
+  local item provider ctx_alias cluster region assume_role_arn role_arn server ca_file token_file namespace cmd
   while IFS= read -r item; do
     provider=$(kc_field '.provider')
     ctx_alias=$(kc_field '.alias')
     cluster=$(kc_field '.cluster')
     region=$(kc_field '.region')
+    assume_role_arn=$(kc_field '.assumeRoleArn')
     role_arn=$(kc_field '.roleArn')
     server=$(kc_field '.server')
     ca_file=$(kc_field '.caFile')
@@ -173,8 +185,12 @@ register_kube_contexts() {
           continue
         fi
         cmd=(aws eks update-kubeconfig --name "$cluster" --alias "$ctx_alias")
-        [ -n "$region" ]   && cmd+=(--region "$region")
-        [ -n "$role_arn" ] && cmd+=(--role-arn "$role_arn")
+        [ -n "$region" ]          && cmd+=(--region "$region")
+        # assumeRoleArn은 context 등록 중 DescribeCluster를 실행할 때만 사용한다.
+        # 미지정 시 기본 IRSA 자격증명으로 조회하던 기존 동작을 그대로 유지한다.
+        [ -n "$assume_role_arn" ] && cmd+=(--assume-role-arn "$assume_role_arn")
+        # roleArn은 생성된 kubeconfig의 get-token 인증 Role로 기록된다.
+        [ -n "$role_arn" ]        && cmd+=(--role-arn "$role_arn")
         kc_log "$ctx_alias" "${cmd[*]}"
         if ! "${cmd[@]}"; then
           kc_log "$ctx_alias" "FAILED to register; continuing with remaining contexts."
@@ -191,6 +207,20 @@ register_kube_contexts() {
 
   kc_log "" "registered contexts:"
   kubectl config get-contexts -o name 2>/dev/null || true
+
+  if [ "$has_original_context" = true ]; then
+    if kubectl config use-context "$original_context" >/dev/null 2>&1; then
+      kc_log "" "restored current context ($original_context)."
+    else
+      # 등록 과정에서 기존 context를 삭제하지는 않지만, 설정 파일이 외부에서 변경된 경우
+      # 원격 EKS context를 기본값으로 남기지 않도록 current-context를 비운다.
+      kubectl config unset current-context >/dev/null 2>&1 || true
+      kc_log "" "WARN: failed to restore current context ($original_context); current context cleared."
+    fi
+  else
+    kubectl config unset current-context >/dev/null 2>&1 || true
+    kc_log "" "current context remains unset."
+  fi
 }
 
 # 한 클러스터 실패가 컨테이너 기동을 막지 않도록 함수 호출 자체도 보호한다.

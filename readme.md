@@ -469,8 +469,9 @@ J-Jobs 컨테이너 이미지에는 `awscli` / `kubectl` 이 포함되어 있어
 1. **Agent 측 클러스터(A 계정)**: Agent Pod의 ServiceAccount(`jjobs-agent`)에 IAM Role을 IRSA annotation으로 부여한다.
    - `jjobs-rbac.yaml` 의 `jjobs-agent` ServiceAccount metadata.annotations 에 `eks.amazonaws.com/role-arn: arn:aws:iam::<A-account>:role/<jjobs-agent-irsa-role>` 입력.
    - 해당 IAM Role의 신뢰 정책은 EKS OIDC Provider를 신뢰하도록 구성한다(표준 IRSA 셋업).
-2. **대상 클러스터(B 계정) 측 IAM Role**: 대상 클러스터 접근용 IAM Role을 만들고, 해당 Role의 Trust Policy에서 A 계정의 IRSA Role(`<jjobs-agent-irsa-role>`)이 `sts:AssumeRole` 가능하도록 허용한다.
-3. **대상 클러스터 RBAC**: 대상 EKS의 **Access Entry**(권장) 또는 `aws-auth` ConfigMap에 위 B 계정 IAM Role을 매핑하고, K8s Role/ClusterRole로 Pod/Job CRUD 권한을 부여한다.
+   - `assumeRoleArn` 또는 `roleArn`을 지정하는 경우 해당 Target Role ARN에 대한 `sts:AssumeRole` 권한을 이 IRSA Role에 부여한다.
+2. **대상 클러스터(B 계정) 측 IAM Role**: 대상 클러스터 접근용 IAM Role을 만들고, 해당 Role의 Trust Policy에서 A 계정의 IRSA Role(`<jjobs-agent-irsa-role>`)이 `sts:AssumeRole` 가능하도록 허용한다. context 등록도 이 Role로 수행하려면 해당 Role에 대상 EKS의 `eks:DescribeCluster` 권한을 부여한다.
+3. **대상 클러스터 RBAC**: 대상 EKS의 **Access Entry**(권장) 또는 `aws-auth` ConfigMap에 kubectl 인증용 B 계정 IAM Role을 매핑하고, K8s Role/ClusterRole로 Pod/Job CRUD 권한을 부여한다.
 4. **`KUBE_CONTEXTS` 등록**: StatefulSet env에 아래 스키마로 클러스터 정보를 주입하면 entrypoint가 Pod 부팅 시 항목별 provider에 맞게 context를 자동 등록한다(이 cross-account 흐름은 `provider:"eks"` 로 `aws eks update-kubeconfig` 를 호출한다. 자기 자신 클러스터는 `incluster`, 클라우드 API 없는 클러스터는 `raw` 를 사용).
 5. **메타데이터 매핑(운영)**: J-Jobs 관리 화면에서 동일 alias를 K8sJob에 매핑한다.
 
@@ -499,7 +500,8 @@ J-Jobs 컨테이너 이미지에는 `awscli` / `kubectl` 이 포함되어 있어
     "provider": "eks",
     "cluster":  "prod-b",
     "region":   "us-east-1",
-    "roleArn":  "arn:aws:iam::<input_target_account_id>:role/<input_cross_account_role>"
+    "assumeRoleArn": "arn:aws:iam::<input_target_account_id>:role/<input_cross_account_discovery_role>",
+    "roleArn":  "arn:aws:iam::<input_target_account_id>:role/<input_cross_account_access_role>"
   },
   {
     "alias":    "main",
@@ -518,7 +520,8 @@ J-Jobs 컨테이너 이미지에는 `awscli` / `kubectl` 이 포함되어 있어
 | `provider` |  | — | `incluster` / `raw` / `eks`. 미지정 시 `eks` 로 처리되어 `cluster` 와 AWS 권한을 요구하므로, 명시하는 것을 권장한다. `gke`/`aks` 는 향후 확장 예정. |
 | `cluster` | ✅ | `eks` | 대상 EKS 클러스터 이름. `raw`/`incluster` 에서는 불필요(무시). |
 | `region` |  | `eks` | 대상 클러스터의 AWS region. 다중 region 운영 시 항목별 명시 권장. |
-| `roleArn` |  | `eks` | cross-account 시나리오에서 AssumeRole 대상 IAM Role ARN. 단일 계정이면 생략. |
+| `assumeRoleArn` |  | `eks` | context 등록 시 `DescribeCluster`를 수행하기 위해 Assume할 IAM Role ARN. 미지정 시 Agent 기본 IRSA 자격증명으로 조회하여 기존 동작을 유지한다. |
+| `roleArn` |  | `eks` | 생성된 kubeconfig에서 `aws eks get-token` 인증에 사용할 IAM Role ARN. |
 | `server` | ✅ | `raw` | 대상 API 서버 URL(`https://host:port`). `incluster` 는 `KUBERNETES_SERVICE_HOST/PORT` 로 자동 설정. |
 | `caFile` |  | `raw` | API 서버 CA 인증서 파일 경로(컨테이너 내부). 미지정 시 시스템 신뢰 저장소로 폴백하므로, **사설 CA로 발급된 API 서버라면 등록은 성공해도 이후 kubectl 호출이 TLS 검증에 실패**한다(사실상 필수). `incluster` 는 SA CA 자동 사용. |
 | `tokenFile` | ✅ | `raw` | Bearer 토큰 파일 경로(컨테이너 내부). 토큰 회전을 고려해 `tokenFile` 로 등록되어 매 kubectl 호출 시 재읽기된다. `incluster` 는 SA 토큰 자동 사용. |
@@ -548,10 +551,14 @@ env:
       [
         {"alias":"onprem","provider":"raw","server":"https://10.0.0.1:6443","caFile":"/etc/kube/onprem-ca.crt","tokenFile":"/etc/kube/onprem-token"},
         {"alias":"prod-a","provider":"eks","cluster":"prod-a","region":"ap-northeast-2"},
-        {"alias":"prod-b","provider":"eks","cluster":"prod-b","region":"us-east-1","roleArn":"arn:aws:iam::222222222222:role/CrossAcctEksAccess"},
+        {"alias":"prod-b","provider":"eks","cluster":"prod-b","region":"us-east-1","assumeRoleArn":"arn:aws:iam::222222222222:role/CrossAcctEksDiscovery","roleArn":"arn:aws:iam::222222222222:role/CrossAcctEksAccess"},
         {"alias":"main","provider":"incluster"}
       ]
 ```
+
+`assumeRoleArn`과 `roleArn`은 같은 Role을 지정할 수 있지만 사용 시점이 다르다. 전자는 Agent 기동 중 `update-kubeconfig`의 `DescribeCluster`에만 사용되고, 후자는 이후 각 `kubectl` 호출의 `get-token` 인증에 사용된다. `assumeRoleArn`을 생략하고 `roleArn`만 지정한 기존 설정은 변경 없이 동작한다.
+
+`aws eks update-kubeconfig`는 등록한 EKS context를 `current-context`로 변경한다. entrypoint는 `KUBE_CONTEXTS` 처리 전의 current context를 보관했다가 모든 항목을 등록한 뒤 복원한다. 따라서 context 미지정 기존 Job의 기본 대상은 유지되며, 원격 클러스터 실행은 K8sJob에 지정한 `--context=<alias>`로만 선택된다. 등록 전 current context가 없던 경우에는 등록 후에도 unset 상태를 유지한다.
 
 > 위 예시의 `main`(`incluster`) 항목은 **선택**이다 — 로컬 클러스터도 원격들과 동일한 alias 체계로 노출할 때만 넣는다. 로컬 Job을 context 없이 돌리는 기본 동작으로 충분하면 생략한다.
 
