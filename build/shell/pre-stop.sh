@@ -52,16 +52,6 @@ else
 fi
 sleep 1;
 
-#check agent status
-pid="$(ps -ef | grep cname=jjobs | grep -v "grep" | awk '{print $2}')"
-if [ -z "$pid" ]
-then
-	AGENT_STATUS="STOPPED"
-else
-	AGENT_STATUS="RUNNING"
-fi
-sleep 1;
-
 
 if [ "$STOP_SERVER" == "Y" ] && [ "$SERVER_STATUS" == "RUNNING" ]
 then
@@ -80,15 +70,63 @@ then
 	http://localhost:$SERVER_WEB_PORT/jjob-server/api/v1/serversetting/server/hold
 fi
 
-if [ "$STOP_AGENT" == "Y" ] && [ "$AGENT_STATUS" == "RUNNING" ]
+if [ "$STOP_AGENT" == "Y" ]
 then
 	#2. Agent gracefully stop
-	#2-1. Agent hold and stop
-	curl -X POST \
-	-H "Content-Type: application/json" \
-	-H "private-token: $API_PRIVATE_TOKEN" \
-	-d "{\"groupId\":1,\"agentGroupId\":null,\"agentName\":\"$HOSTNAME\"}" \
-	$PROTOCOL://$JJOBS_SERVER_IP:$SERVER_WEB_PORT/jjob-server/api/v1/serversetting/agent/holdAndStopAgent
+	#2-1. Agent hold and stop + Check Agent down (Server API를 사용하므로 Server 종료보다 먼저 확인)
+	STOP_REQUESTED="N"
+	AGENT_ABSENT_COUNT=0
+	while true :
+	do
+		pid="$(ps -ef | grep -E "cname=(agent|jjobs)" | grep -v "grep" | awk '{print $2}')"
+		if [ -z "$pid" ]
+		then
+		echo "$(TZ="Asia/Seoul" date +'%Y-%m-%d %T') jjob-agent is terminated."
+			break
+		fi
+
+		#2-2. 중지 요청은 성공할 때까지 재시도하고, 성공 후에는 다시 보내지 않음
+		if [ "$STOP_REQUESTED" != "Y" ]
+		then
+			curl -fsS -m 10 -X POST \
+			-H "Content-Type: application/json" \
+			-H "private-token: $API_PRIVATE_TOKEN" \
+			-d "{\"groupId\":1,\"agentGroupId\":null,\"agentName\":\"$HOSTNAME\"}" \
+			$PROTOCOL://$JJOBS_SERVER_IP:$SERVER_WEB_PORT/jjob-server/api/v1/serversetting/agent/holdAndStopAgent \
+			| jq -e '.status.result.dev_message == "success"' > /dev/null && STOP_REQUESTED="Y"
+		fi
+
+		#2-3. runtime만 남은 경우: Agent 종료 + 진행중 Job 0건 + (일시정지 or Agent 부재 60회 연속 확인)이면 종료로 판단
+		if [ -z "$(ps -ef | grep cname=agent | grep -v "grep")" ]
+		then
+			AGENT_ABSENT_COUNT=$((AGENT_ABSENT_COUNT + 1))
+			agent=$(curl -fsS -m 10 -G -H "private-token: $API_PRIVATE_TOKEN" \
+			--data-urlencode "filter:groupId=1" \
+			--data-urlencode "filter:agentNameMatch=$HOSTNAME" \
+			$PROTOCOL://$JJOBS_SERVER_IP:$SERVER_WEB_PORT/jjob-server/api/v1/serversetting/agent/list \
+			| jq -ce --arg name "$HOSTNAME" --argjson absent "$AGENT_ABSENT_COUNT" '.list[] | select(.agentName == $name and (.isHold == "Y" or $absent >= 60))') &&
+			curl -fsS -m 10 -G -H "private-token: $API_PRIVATE_TOKEN" \
+			--data-urlencode "filter:groupId=1" \
+			--data-urlencode "filter:agentId=$(jq -r '.agentId' <<< "$agent")" \
+			--data-urlencode "filter:agentGroupId=$(jq -r '.agentGroupId' <<< "$agent")" \
+			--data-urlencode "filter:statusMajor='F'" \
+			$PROTOCOL://$JJOBS_SERVER_IP:$SERVER_WEB_PORT/jjob-server/api/v1/job/request/count/map \
+			| jq -e '.count == 0' > /dev/null
+			if [ $? -eq 0 ]
+			then
+				echo "$(TZ="Asia/Seoul" date +'%Y-%m-%d %T') jjob-agent process is terminated and has no running job. (remaining pid: $pid)"
+				break
+			fi
+		else
+			# main이 다시 떴으면(재기동) 새 main에도 중지 요청을 다시 보낸다
+			if [ "$AGENT_ABSENT_COUNT" -gt 0 ]
+			then
+				STOP_REQUESTED="N"
+			fi
+			AGENT_ABSENT_COUNT=0
+		fi
+		sleep 1;
+	done
 fi
 
 if [ "$STOP_SERVER" == "Y" ] && [ "$SERVER_STATUS" == "RUNNING" ]
@@ -125,21 +163,6 @@ then
 		if [ -z "$pid" ]
 		then
 			echo "$(TZ="Asia/Seoul" date +'%Y-%m-%d %T') jjob-server is terminated."
-			break
-		fi
-		sleep 1;
-	done
-fi
-
-if [ "$STOP_AGENT" == "Y" ] && [ "$AGENT_STATUS" == "RUNNING" ]
-then
-	#2-2. Check Agent down and delete pod
-	while true :
-	do
-		pid="$(ps -ef | grep cname=jjobs | grep -v "grep" | awk '{print $2}')"
-		if [ -z "$pid" ]
-		then
-		echo "$(TZ="Asia/Seoul" date +'%Y-%m-%d %T') jjob-agent is terminated."
 			break
 		fi
 		sleep 1;
