@@ -62,12 +62,36 @@ tail -f $LOGS_BASE/server/$HOSTNAME/server.log@g' $JJOBS_BASE/start_server.sh
         else
           sed -i '3iexport JJOB_SERVER_IP='"$HOSTNAME"'.'"$JJOB_SERVICE_NAME"'' $JJOBS_BASE/start_server.sh
         fi
+fi
 
-        echo "setting for java security.."
-        sed -i '307d' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '307inetworkaddress.cache.ttl=1' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '322d' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '322inetworkaddress.cache.negative.ttl=3' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
+echo "setting for java security.."
+if [ -z "$NETWORKADDRESS_CACHE_TTL" ]; then
+  export NETWORKADDRESS_CACHE_TTL=1
+fi
+if [ -z "$NETWORKADDRESS_CACHE_NEGATIVE_TTL" ]; then
+  export NETWORKADDRESS_CACHE_NEGATIVE_TTL=3
+fi
+JAVA_SECURITY_FILE=""
+for security_file in "$JJOBS_BASE"/*/jre/lib/security/java.security "$JJOBS_BASE"/*/conf/security/java.security; do
+  [ -f "$security_file" ] || continue
+  if [ -n "$JAVA_SECURITY_FILE" ]; then
+    JAVA_SECURITY_FILE=""
+    break
+  fi
+  JAVA_SECURITY_FILE="$security_file"
+done
+if [ -z "$JAVA_SECURITY_FILE" ]; then
+  echo "WARNING: java.security file not found or multiple files found under $JJOBS_BASE; skipping DNS cache TTL settings" >&2
+else
+  for security_property in "networkaddress.cache.ttl=$NETWORKADDRESS_CACHE_TTL" "networkaddress.cache.negative.ttl=$NETWORKADDRESS_CACHE_NEGATIVE_TTL"; do
+    security_key=${security_property%%=*}
+    security_pattern=$(printf '%s\n' "$security_key" | sed 's/\./\\./g')
+    if grep -Eq "^[[:space:]#]*${security_pattern}[[:space:]]*=" "$JAVA_SECURITY_FILE"; then
+      sed -i "s/^[[:space:]#]*${security_pattern}[[:space:]]*=.*/${security_property}/" "$JAVA_SECURITY_FILE"
+    else
+      printf '\n%s\n' "$security_property" >> "$JAVA_SECURITY_FILE"
+    fi
+  done
 fi
 
 if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
@@ -101,8 +125,8 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
 
                 DECRYPTED_DB_USER=`$JJOBS_BASE/encrypter.sh d $ENCRYPTED_DB_USER`
                 DECRYPTED_DB_PASSWD=`$JJOBS_BASE/encrypter.sh d $ENCRYPTED_DB_PASSWD`
-                sed -i '29d' $JJOBS_BASE/manager/conf/context.xml
-                sed -i '29i\                         username='\"$DECRYPTED_DB_USER\"' password='\"$DECRYPTED_DB_PASSWD\"' driverClassName="org.postgresql.Driver"' $JJOBS_BASE/manager/conf/context.xml
+                sed -i '30d' $JJOBS_BASE/manager/conf/context.xml
+                sed -i '30i\                         username='\"$DECRYPTED_DB_USER\"' password='\"$DECRYPTED_DB_PASSWD\"' driverClassName="org.postgresql.Driver"' $JJOBS_BASE/manager/conf/context.xml
 
         fi
 
@@ -117,12 +141,6 @@ if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
         if [ -n "$SSO_KEYCLOAK_ISSUER_URI" ]; then
                 sed -i '3iexport SSO_KEYCLOAK_ISSUER_URI='$SSO_KEYCLOAK_ISSUER_URI'' start_manager.sh
         fi
-
-        echo "setting for java security.."
-        sed -i '307d' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '307inetworkaddress.cache.ttl=1' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '322d' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
-        sed -i '322inetworkaddress.cache.negative.ttl=3' $JJOBS_BASE/jdk8u212-b03/jre/lib/security/java.security
 fi
 
 if [ "$WGET_URL" ] && [ "$WGET_FOLDER_PATH" ] && [ "$WGET_FILE_NAME" ] ; then
