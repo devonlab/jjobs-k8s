@@ -72,10 +72,28 @@ fi
 if [ -z "$NETWORKADDRESS_CACHE_NEGATIVE_TTL" ]; then
   export NETWORKADDRESS_CACHE_NEGATIVE_TTL=3
 fi
-sed -i '313d' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
-sed -i '313inetworkaddress.cache.ttl='"$NETWORKADDRESS_CACHE_TTL"'' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
-sed -i '328d' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
-sed -i '328inetworkaddress.cache.negative.ttl='"$NETWORKADDRESS_CACHE_NEGATIVE_TTL"'' $JJOBS_BASE/amazon-corretto-8.462.08.1-linux-x64/jre/lib/security/java.security
+JAVA_SECURITY_FILE=""
+for security_file in "$JJOBS_BASE"/*/jre/lib/security/java.security "$JJOBS_BASE"/*/conf/security/java.security; do
+  [ -f "$security_file" ] || continue
+  if [ -n "$JAVA_SECURITY_FILE" ]; then
+    JAVA_SECURITY_FILE=""
+    break
+  fi
+  JAVA_SECURITY_FILE="$security_file"
+done
+if [ -z "$JAVA_SECURITY_FILE" ]; then
+  echo "WARNING: java.security file not found or multiple files found under $JJOBS_BASE; skipping DNS cache TTL settings" >&2
+else
+  for security_property in "networkaddress.cache.ttl=$NETWORKADDRESS_CACHE_TTL" "networkaddress.cache.negative.ttl=$NETWORKADDRESS_CACHE_NEGATIVE_TTL"; do
+    security_key=${security_property%%=*}
+    security_pattern=$(printf '%s\n' "$security_key" | sed 's/\./\\./g')
+    if grep -Eq "^[[:space:]#]*${security_pattern}[[:space:]]*=" "$JAVA_SECURITY_FILE"; then
+      sed -i "s/^[[:space:]#]*${security_pattern}[[:space:]]*=.*/${security_property}/" "$JAVA_SECURITY_FILE"
+    else
+      printf '\n%s\n' "$security_property" >> "$JAVA_SECURITY_FILE"
+    fi
+  done
+fi
 
 if [ "$INSTALL_KIND" == "M" ] || [ "$INSTALL_KIND" == "F" ] ; then
         echo "unwar..."
