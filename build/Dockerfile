@@ -53,7 +53,7 @@ ENV ON_BOOT=yes \
 
 # Install Util
 # -------------------------------------------------------------
-RUN dnf update -y && dnf clean all \
+RUN dnf update -y \
     && dnf -y install wget \
     openssh-server openssh-clients \
     hostname \
@@ -67,7 +67,10 @@ RUN dnf update -y && dnf clean all \
     #iptables \
     bind-utils \
     passwd \
-    vim vim-minimal
+    vim vim-minimal \
+    glibc-langpack-ko \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 #RUN mkdir /var/run/sshd
 #RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
@@ -97,7 +100,8 @@ ENV AWS_PAGER=""
 # -------------------------------------------------------------
 RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip \
     && unzip awscliv2.zip \
-    && ./aws/install
+    && ./aws/install \
+    && rm -rf awscliv2.zip ./aws
 
 # kubectl
 # -------------------------------------------------------------
@@ -111,10 +115,6 @@ RUN curl -LO https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-am
     && chmod +x ./jq-linux-amd64 \
     && mv ./jq-linux-amd64 /usr/local/bin/jq
 
-# KR language pack
-# -------------------------------------------------------------
-RUN dnf install -y glibc-langpack-ko
-
 # timezone setting
 RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
@@ -122,23 +122,20 @@ RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 # -------------
 COPY xml/web_redis.xml $WORKING_DIR/
 COPY xml/context-manager_redis.xml $WORKING_DIR/
-COPY shell/entrypoint.sh /entrypoint.sh
-COPY shell/pre-stop.sh /pre-stop.sh
-COPY shell/post-start.sh /post-start.sh
-COPY shell/install-jjobs.sh shell/after-install.sh $WORKING_DIR/
-COPY shell/install-agent.sh $WORKING_DIR/
-COPY shell/start-all.sh shell/stop-all.sh $WORKING_DIR/
-COPY shell/sample-shell.sh $WORKING_DIR/
-COPY shell/agent-healthcheck.sh $WORKING_DIR/
-COPY shell/network-status-check.sh $WORKING_DIR/
-COPY shell/readiness.sh $WORKING_DIR/
-COPY shell/liveness.sh $WORKING_DIR/
-COPY shell/tail-agent-syslog.sh $WORKING_DIR/
-COPY installer/jjob_installer_linux_x64.sh /install/
+COPY --chmod=775 shell/entrypoint.sh /entrypoint.sh
+COPY --chmod=775 shell/pre-stop.sh /pre-stop.sh
+COPY --chmod=775 shell/post-start.sh /post-start.sh
+COPY --chmod=775 shell/install-jjobs.sh shell/after-install.sh $WORKING_DIR/
+COPY --chmod=775 shell/install-agent.sh $WORKING_DIR/
+COPY --chmod=775 shell/start-all.sh shell/stop-all.sh $WORKING_DIR/
+COPY --chmod=775 shell/sample-shell.sh $WORKING_DIR/
+COPY --chmod=775 shell/agent-healthcheck.sh $WORKING_DIR/
+COPY --chmod=775 shell/network-status-check.sh $WORKING_DIR/
+COPY --chmod=775 shell/readiness.sh $WORKING_DIR/
+COPY --chmod=775 shell/liveness.sh $WORKING_DIR/
+COPY --chmod=775 shell/tail-agent-syslog.sh $WORKING_DIR/
+COPY --chmod=775 installer/jjob_installer_linux_x64.sh /install/
 
-RUN chmod ug+x $WORKING_DIR/*.sh \
-    && chmod ug+x /install/*.sh \
-    && chmod ug+x /*.sh
 #RUN chown -R jjobs:jjobs $WORKING_DIR
 #RUN chown jjobs:jjobs /entrypoint.sh
 # System-wide aliases (applies to root and any future user via /etc/skel/.bashrc)
