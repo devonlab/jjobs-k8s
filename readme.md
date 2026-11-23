@@ -6,6 +6,20 @@ Kubernetes(이하 k8s) 환경에서 J-Jobs v2를 서비스하기 위한 방법�
 ### J-Jobs Meta DB
 J-Jobs를 위한 Meta DBMS가 사전에 구성되어야 한다. 기존에 사용 중인 DBMS가 있을 경우, J-Jobs에서 사용할 수 있는 DB 계정을 준비한다. J-Jobs에서는 현재 Oracle, MariaDB, MySQL, PostgreSQL를 Meta DBMS로 지원한다.
 
+> **MySQL JDBC 드라이버 별도 준비(2.11.4+)**: 라이선스 정책에 따라 MySQL JDBC 드라이버(`mysql-connector-j-*.jar`)는 J-Jobs 공식 이미지에 포함되지 않는다. `DB_TYPE`을 `mysql`로 사용하는 경우, 드라이버를 포함한 이미지를 빌드하고 `CUSTOM_COMMAND` 환경 변수로 설치 후·기동 전에 드라이버를 복사한다.
+>
+> ```dockerfile
+> FROM devonlab/jjobs:<version>
+> COPY mysql-connector-j-x.x.x.jar /drivers/
+> ```
+>
+> ```yaml
+> - name: CUSTOM_COMMAND
+>   value: "for d in manager/lib server/lib agent/sitelib; do [ -d $JJOBS_BASE/$d ] && cp /drivers/mysql-connector-j-*.jar $JJOBS_BASE/$d/; done; true"
+> ```
+>
+> 위 명령은 설치 유형(`INSTALL_KIND`)에 따라 설치된 구성요소의 경로(매니저 `manager/lib`, 서버 `server/lib`, 에이전트 `agent/sitelib`)에만 복사한다.
+
 ### J-Jobs 구성
 J-Jobs에서 사용되는 k8s 자원은 다음과 같다.
 * `StatefulSet` : 배치 관리 서버 역할의 J-Jobs manager/server에서 사용하며, J-Jobs 이중화 구성 시 replica 개수로 조정한다.
