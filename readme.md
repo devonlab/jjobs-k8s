@@ -20,6 +20,44 @@ J-Jobs를 위한 Meta DBMS가 사전에 구성되어야 한다. 기존에 사용
 >
 > 위 명령은 설치 유형(`INSTALL_KIND`)에 따라 설치된 구성요소의 경로(매니저 `manager/lib`, 서버 `server/lib`, 에이전트 `agent/sitelib`)에만 복사한다.
 
+### JDK
+J-Jobs 공식 이미지는 J-Jobs를 기동하기 위한 JDK 8을 기본 제공한다. J-Jobs v2.11 운영자 가이드의 설치 검증 버전은 Java 8과 Java 11이다.
+
+> **별도 JDK 사용(2.10.21+)**: 고객사 요구사항이나 긴급 보안 패치로 별도 JDK를 사용해야 할 경우, `CUSTOM_COMMAND`를 지원하는 J-Jobs 이미지에 해당 JDK를 포함해 빌드한다. 교체할 JDK는 사용 중인 J-Jobs 버전의 호환 범위에서 선택한다.
+>
+> Dockerfile과 같은 디렉터리에 컨테이너 아키텍처에 맞는 Linux용 JDK `.tar.gz` 파일을 둔다. 압축 파일 내 경로는 `jdk-version/bin/java`처럼 하나의 최상위 디렉터리로 시작해야 한다. 직접 압축하는 경우 `tar -czf jdk-version.tar.gz jdk-version`처럼 디렉터리 이름 앞에 `./`를 붙이지 않는다.
+>
+> ```dockerfile
+> FROM devonlab/jjobs:<version>
+> COPY jdk-8.xxx.xx.tar.gz /JDKs/jdk.tar.gz
+> ```
+>
+> J-Jobs 2.11.4 이상 공식 이미지에는 `/working/use-custom-jdk.sh`가 포함된다. 2.10.21 이상 2.11.4 미만 이미지를 사용하는 경우, [use-custom-jdk.sh](build/shell/use-custom-jdk.sh)를 Dockerfile과 같은 디렉터리에 두고 Dockerfile에 `COPY use-custom-jdk.sh /working/`를 추가한다.
+>
+> `docker build -t <이미지>:<태그> .`로 이미지를 빌드하고 클러스터가 가져올 수 있는 레지스트리에 등록한다. StatefulSet의 `image`에 해당 이미지 태그를 지정하고, 같은 컨테이너의 `env`에 `CUSTOM_COMMAND`를 추가한다.
+>
+> ```yaml
+> - name: CUSTOM_COMMAND
+>   value: "/bin/bash /working/use-custom-jdk.sh || exit 1"
+> ```
+>
+> 위 명령은 설치 후·기동 전에 `/JDKs`에서 아카이브를 읽어 `$JJOBS_BASE/.custom-jdk`에 풀고, 설치 스크립트가 기록한 기본 JDK 경로를 이 디렉터리에 연결한다. 컨테이너 실행 사용자에게 `$JJOBS_BASE` 쓰기 권한과 기존 JDK 디렉터리를 이동·삭제할 권한이 필요하다. 설치 유형(`INSTALL_KIND`)에 따라 설치된 매니저·서버의 `JRE_HOME`과 에이전트 및 런타임의 `JAVA_HOME`이 이 경로를 사용한다.
+>
+> MySQL JDBC 드라이버도 추가하는 경우, 같은 이미지에 드라이버를 포함하고 `CUSTOM_COMMAND`를 아래와 같이 설정한다. JDK 교체나 드라이버 복사에 실패하면 기동을 중단한다.
+>
+> ```yaml
+> - name: CUSTOM_COMMAND
+>   value: |
+>     /bin/bash /working/use-custom-jdk.sh || exit 1
+>     for d in manager/lib server/lib agent/sitelib; do
+>       if [ -d "$JJOBS_BASE/$d" ]; then
+>         cp /drivers/mysql-connector-j-*.jar "$JJOBS_BASE/$d/" || exit 1
+>       fi
+>     done
+> ```
+>
+> 재배포 후 Pod에서 `"$JJOBS_BASE/.custom-jdk/bin/java" -version`으로 JDK 버전을 확인하고, 설치한 구성요소의 기동 로그를 확인한다. 같은 파일시스템에 별도 JDK가 이미 적용되어 있으면 교체를 건너뛴다. 다른 JDK를 적용하려면 새 아카이브로 이미지를 빌드하고 새 컨테이너를 생성한다. 교체는 컨테이너 기동 시 수행되므로 베이스 이미지와 이미지에 포함된 설치 파일에는 기본 JDK가 남는다.
+
 ### J-Jobs 구성
 J-Jobs에서 사용되는 k8s 자원은 다음과 같다.
 * `StatefulSet` : 배치 관리 서버 역할의 J-Jobs manager/server에서 사용하며, J-Jobs 이중화 구성 시 replica 개수로 조정한다.
