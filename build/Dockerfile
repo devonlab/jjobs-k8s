@@ -127,6 +127,7 @@ COPY --chmod=775 shell/pre-stop.sh /pre-stop.sh
 COPY --chmod=775 shell/post-start.sh /post-start.sh
 COPY --chmod=775 shell/install-jjobs.sh shell/after-install.sh $WORKING_DIR/
 COPY --chmod=775 shell/install-agent.sh $WORKING_DIR/
+COPY --chmod=775 shell/use-custom-jdk.sh $WORKING_DIR/
 COPY --chmod=775 shell/start-all.sh shell/stop-all.sh $WORKING_DIR/
 COPY --chmod=775 shell/sample-shell.sh $WORKING_DIR/
 COPY --chmod=775 shell/agent-healthcheck.sh $WORKING_DIR/
